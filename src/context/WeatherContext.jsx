@@ -14,6 +14,10 @@ export const useWeather = () => {
             getBackgroundGradient: () => 'from-amber-400 via-orange-400 to-yellow-500',
             calculateSunstayScore: () => 75,
             getFireplaceMode: () => false,
+            getTemperature: () => null,
+            getWeatherDescription: () => 'Check back for live weather insights!',
+            getCardBackground: () => 'from-amber-50 via-orange-50 to-yellow-50',
+            getCardAccent: () => 'border-amber-300/50',
         };
     }
     return context;
@@ -141,6 +145,93 @@ export const WeatherProvider = ({ children }) => {
         return theme === 'rainy';
     };
 
+    // Get current temperature (rounded)
+    const getTemperature = () => {
+        if (!weather) return null;
+        return Math.round(weather.main.temp);
+    };
+
+    // Generate dynamic weather description based on conditions
+    const getWeatherDescription = (venue) => {
+        const temp = getTemperature();
+
+        if (!weather || temp === null) {
+            return "Check back for live weather insights!";
+        }
+
+        const condition = weather.weather[0].main.toLowerCase();
+        const hasFireplace = venue?.tags?.includes('Fireplace');
+        const hasHeaters = venue?.tags?.includes('Heaters');
+        const isSunny = venue?.tags?.includes('Sunny');
+        const isRooftop = venue?.tags?.includes('Rooftop');
+
+        // Rainy conditions
+        if (condition.includes('rain') || condition.includes('drizzle')) {
+            if (hasFireplace) {
+                return `Rain outside, cozy inside. Perfect fireplace weather at ${temp}°C.`;
+            } else if (hasHeaters) {
+                return `Rain starting soon, grab a heater spot at ${temp}°C.`;
+            } else {
+                return `${temp}°C with rain - consider indoor seating.`;
+            }
+        }
+
+        // Cloudy conditions
+        if (condition.includes('cloud')) {
+            if (temp >= 18 && temp <= 24) {
+                return `Mild ${temp}°C under clouds. Great for outdoor drinks.`;
+            } else if (temp < 18) {
+                return `Cool ${temp}°C today. A heater would be nice!`;
+            } else {
+                return `${temp}°C with cloud cover. Pleasant outdoor conditions.`;
+            }
+        }
+
+        // Clear/Sunny conditions
+        if (temp >= 20 && temp <= 26) {
+            if (isSunny || isRooftop) {
+                return `Perfect ${temp}°C for a pint in the sun! ☀️`;
+            }
+            return `Ideal ${temp}°C weather. Get a sunny spot!`;
+        } else if (temp > 26 && temp <= 32) {
+            return `Hot ${temp}°C - find some shade and stay hydrated!`;
+        } else if (temp > 32) {
+            return `Scorching ${temp}°C! Air-con or icy drinks recommended.`;
+        } else if (temp >= 15 && temp < 20) {
+            return `Pleasant ${temp}°C. A light jacket might help.`;
+        } else {
+            return `Cool ${temp}°C. Bundle up and enjoy the vibe!`;
+        }
+    };
+
+    // Get card background gradient based on weather theme
+    const getCardBackground = () => {
+        switch (theme) {
+            case 'sunny':
+                return 'from-amber-50 via-orange-50 to-yellow-50';
+            case 'rainy':
+                return 'from-slate-100 via-blue-50 to-indigo-50';
+            case 'cloudy':
+                return 'from-gray-50 via-slate-100 to-gray-100';
+            default:
+                return 'from-amber-50 via-orange-50 to-yellow-50';
+        }
+    };
+
+    // Get card border/accent color based on weather
+    const getCardAccent = () => {
+        switch (theme) {
+            case 'sunny':
+                return 'border-amber-300/50';
+            case 'rainy':
+                return 'border-blue-300/50';
+            case 'cloudy':
+                return 'border-slate-300/50';
+            default:
+                return 'border-amber-300/50';
+        }
+    };
+
     const value = {
         weather,
         loading,
@@ -148,6 +239,10 @@ export const WeatherProvider = ({ children }) => {
         getBackgroundGradient,
         calculateSunstayScore,
         getFireplaceMode,
+        getTemperature,
+        getWeatherDescription,
+        getCardBackground,
+        getCardAccent,
     };
 
     return (
