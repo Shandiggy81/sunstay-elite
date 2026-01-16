@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle } from 'lucide-react';
 
-const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSurpriseMe }) => {
+const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFindSmoking, onSurpriseMe }) => {
     const [messages, setMessages] = useState([
         {
             id: 1,
             type: 'bot',
-            text: "G'day! I'm Sunny. Looking for a rooftop or a heater today? ☀️",
+            text: "G'day! I'm Sunny. What kind of spot are you looking for today? 😎",
         }
     ]);
     const [hasActed, setHasActed] = useState(false);
@@ -40,14 +40,19 @@ const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSur
 
     const quickReplies = [
         {
-            text: "Find me a rooftop ☀️",
-            response: "Great choice! Filtering the map to show Melbourne's best rooftops... 🏙️",
-            action: onFilterRooftops
+            text: "Where is wheelchair accessible? ♿",
+            response: "Great question! Let me filter to wheelchair-friendly venues... 🦽",
+            action: onFindWheelchair
         },
         {
-            text: "Where's the beer garden? 🍺",
-            response: "Ah, a classic! Let me take you to Wonderland's famous beer garden... 🌿",
-            action: onFindBeerGarden
+            text: "Find me a dog-friendly spot 🐶",
+            response: "Woof! Filtering to pet-friendly venues now... 🐕",
+            action: onFindDogFriendly
+        },
+        {
+            text: "Where can I smoke? 🚬",
+            response: "No worries! Showing venues with smoking areas... 🌿",
+            action: onFindSmoking
         },
         {
             text: "Surprise me! 🎲",
@@ -60,7 +65,7 @@ const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSur
         setMessages([{
             id: 1,
             type: 'bot',
-            text: "G'day! I'm Sunny. Looking for a rooftop or a heater today? ☀️",
+            text: "G'day! I'm Sunny. What kind of spot are you looking for today? 😎",
         }]);
         setHasActed(false);
     };
@@ -73,7 +78,7 @@ const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSur
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 20, scale: 0.9 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="fixed bottom-28 right-6 z-40 w-80 max-w-[calc(100vw-3rem)]"
+                    className="fixed bottom-28 right-6 z-40 w-[350px] max-w-[calc(100vw-3rem)]"
                 >
                     {/* Chat window */}
                     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
@@ -104,7 +109,7 @@ const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSur
                         </div>
 
                         {/* Messages */}
-                        <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
+                        <div className="h-56 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
                             {messages.map((message) => (
                                 <motion.div
                                     key={message.id}
@@ -127,20 +132,20 @@ const ChatWidget = ({ isOpen, onClose, onFilterRooftops, onFindBeerGarden, onSur
                         {/* Quick replies */}
                         <div className="p-3 bg-gray-50 border-t border-gray-100">
                             {!hasActed ? (
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     {quickReplies.map((reply, index) => (
                                         <motion.button
                                             key={index}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.1 }}
+                                            transition={{ delay: index * 0.08 }}
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => handleQuickReply(reply.action, reply.text, reply.response)}
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-all text-left flex items-center gap-2"
+                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-all text-left flex items-center gap-2"
                                         >
-                                            <MessageCircle className="w-4 h-4 text-amber-500" />
-                                            {reply.text}
+                                            <MessageCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                            <span className="truncate">{reply.text}</span>
                                         </motion.button>
                                     ))}
                                 </div>

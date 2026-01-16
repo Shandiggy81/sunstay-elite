@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Thermometer, CloudRain, Sun, Cloud } from 'lucide-react';
+import { MapPin, Thermometer, CloudRain, Sun, Cloud, Wind, Sunset, Flame } from 'lucide-react';
 import { useWeather } from '../context/WeatherContext';
 
 const VenueCard = ({ venue, onClose }) => {
@@ -23,6 +23,7 @@ const VenueCard = ({ venue, onClose }) => {
     const weatherDescription = getWeatherDescription(venue);
     const cardBackground = getCardBackground();
     const cardAccent = getCardAccent();
+    const hasFireplace = venue.tags?.includes('Fireplace');
 
     // Score color gradient
     const getScoreColor = (score) => {
@@ -42,6 +43,54 @@ const VenueCard = ({ venue, onClose }) => {
                 return <Sun className="w-5 h-5 text-amber-500" />;
         }
     };
+
+    // Calculate wind factor from API
+    const getWindFactor = () => {
+        if (!weather?.wind?.speed) return { label: 'Unknown', color: 'text-gray-500' };
+        const windSpeed = weather.wind.speed; // m/s
+        if (windSpeed < 3) return { label: 'Calm', color: 'text-green-600', icon: '🍃' };
+        if (windSpeed < 6) return { label: 'Low Wind', color: 'text-green-500', icon: '🌿' };
+        if (windSpeed < 10) return { label: 'Breezy', color: 'text-yellow-600', icon: '💨' };
+        return { label: 'Windy', color: 'text-orange-500', icon: '🌬️' };
+    };
+
+    // Calculate sunshine hours remaining
+    const getSunshineHours = () => {
+        if (!weather?.sys?.sunset) return null;
+        const now = new Date();
+        const sunset = new Date(weather.sys.sunset * 1000);
+        const diffMs = sunset - now;
+
+        if (diffMs <= 0) return { hours: 0, label: 'Sun has set', icon: '🌙' };
+
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (hours === 0) {
+            return { hours: 0, minutes, label: `${minutes}min of sun left`, icon: '🌅' };
+        }
+        return { hours, minutes, label: `~${hours}h ${minutes}m of sun remaining`, icon: '☀️' };
+    };
+
+    // Fireplace status logic
+    const getFireplaceStatus = () => {
+        if (!hasFireplace) return null;
+        const temp = temperature || 20;
+        const hour = new Date().getHours();
+
+        if (temp < 15) {
+            return { status: 'ON Now', color: 'text-orange-600', bgColor: 'bg-orange-100', active: true };
+        } else if (temp < 20 && hour >= 17) {
+            return { status: 'ON from 5PM', color: 'text-orange-500', bgColor: 'bg-orange-50', active: true };
+        } else if (hour >= 18) {
+            return { status: 'ON from 6PM', color: 'text-amber-600', bgColor: 'bg-amber-50', active: false };
+        }
+        return { status: 'Available evenings', color: 'text-gray-500', bgColor: 'bg-gray-50', active: false };
+    };
+
+    const windFactor = getWindFactor();
+    const sunshineHours = getSunshineHours();
+    const fireplaceStatus = getFireplaceStatus();
 
     // Get button gradient based on weather
     const getButtonGradient = () => {
@@ -76,9 +125,9 @@ const VenueCard = ({ venue, onClose }) => {
                         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                         className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-2xl"
                     >
-                        <div className={`relative bg-gradient-to-br ${cardBackground} backdrop-blur-xl rounded-t-3xl shadow-2xl border-t ${cardAccent} p-6 pb-8`}>
+                        <div className={`relative bg-gradient-to-br ${cardBackground} backdrop-blur-xl rounded-t-3xl shadow-2xl border-t ${cardAccent} p-6 pb-8 max-h-[85vh] overflow-y-auto`}>
                             {/* Drag handle */}
-                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6" />
+                            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
 
                             {/* Live Weather Badge */}
                             <motion.div
@@ -94,68 +143,111 @@ const VenueCard = ({ venue, onClose }) => {
                             </motion.div>
 
                             {/* Emoji icon */}
-                            <div className="text-6xl mb-4 text-center animate-float">
+                            <div className="text-5xl mb-3 text-center animate-float">
                                 {venue.emoji}
                             </div>
 
                             {/* Venue name */}
-                            <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">
                                 {venue.name}
                             </h2>
 
                             {/* Vibe */}
-                            <p className="text-lg text-gray-600 mb-4 text-center font-medium">
+                            <p className="text-base text-gray-600 mb-3 text-center font-medium">
                                 {venue.vibe}
                             </p>
 
-                            {/* Live Weather Description - NEW */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
-                                className={`mb-5 p-4 rounded-2xl flex items-center gap-3 ${theme === 'sunny' ? 'bg-amber-100/70 border border-amber-200/50' :
-                                        theme === 'rainy' ? 'bg-blue-100/70 border border-blue-200/50' :
-                                            'bg-gray-100/70 border border-gray-200/50'
-                                    }`}
-                            >
-                                <div className="flex-shrink-0 p-2 rounded-xl bg-white/70 shadow-sm">
-                                    <WeatherIcon />
-                                </div>
-                                <div className="flex-1">
-                                    {temperature !== null && (
-                                        <div className="flex items-center gap-1 mb-1">
-                                            <Thermometer className="w-4 h-4 text-gray-500" />
-                                            <span className="text-xl font-bold text-gray-800">{temperature}°C</span>
-                                            <span className="text-sm text-gray-500 ml-2">in Melbourne</span>
-                                        </div>
-                                    )}
-                                    <p className="text-sm text-gray-700 font-medium">
-                                        {weatherDescription}
-                                    </p>
-                                </div>
-                            </motion.div>
-
                             {/* Address */}
-                            <div className="flex items-center justify-center gap-2 text-gray-500 mb-5">
-                                <MapPin size={18} />
+                            <div className="flex items-center justify-center gap-2 text-gray-500 mb-4">
+                                <MapPin size={16} />
                                 <span className="text-sm">{venue.address}</span>
                             </div>
 
+                            {/* ===== WEATHER INTELLIGENCE SECTION ===== */}
+                            <div className="bg-white/60 rounded-2xl p-4 mb-4 border border-white/50">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+                                    Weather Intelligence
+                                </h3>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Temperature */}
+                                    {temperature !== null && (
+                                        <div className="flex items-center gap-2 p-2 bg-white/70 rounded-xl">
+                                            <Thermometer className="w-5 h-5 text-red-400" />
+                                            <div>
+                                                <p className="text-lg font-bold text-gray-800">{temperature}°C</p>
+                                                <p className="text-xs text-gray-500">Right now</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Wind Factor */}
+                                    <div className="flex items-center gap-2 p-2 bg-white/70 rounded-xl">
+                                        <Wind className={`w-5 h-5 ${windFactor.color}`} />
+                                        <div>
+                                            <p className={`text-sm font-bold ${windFactor.color}`}>
+                                                {windFactor.icon} {windFactor.label}
+                                            </p>
+                                            <p className="text-xs text-gray-500">Wind Factor</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Sunshine Hours */}
+                                    {sunshineHours && (
+                                        <div className="flex items-center gap-2 p-2 bg-white/70 rounded-xl col-span-2">
+                                            <Sunset className="w-5 h-5 text-orange-400" />
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-800">
+                                                    {sunshineHours.icon} {sunshineHours.label}
+                                                </p>
+                                                <p className="text-xs text-gray-500">Sunshine Hours</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Fireplace Status */}
+                                    {fireplaceStatus && (
+                                        <div className={`flex items-center gap-2 p-2 ${fireplaceStatus.bgColor} rounded-xl col-span-2 border ${fireplaceStatus.active ? 'border-orange-300' : 'border-transparent'}`}>
+                                            <Flame className={`w-5 h-5 ${fireplaceStatus.color}`} />
+                                            <div>
+                                                <p className={`text-sm font-bold ${fireplaceStatus.color}`}>
+                                                    🔥 Fireplace: {fireplaceStatus.status}
+                                                </p>
+                                                <p className="text-xs text-gray-500">Cozy Mode</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Weather Description */}
+                                <div className={`mt-3 p-3 rounded-xl ${theme === 'sunny' ? 'bg-amber-100/70' :
+                                        theme === 'rainy' ? 'bg-blue-100/70' :
+                                            'bg-gray-100/70'
+                                    }`}>
+                                    <div className="flex items-center gap-2">
+                                        <WeatherIcon />
+                                        <p className="text-sm text-gray-700 font-medium">
+                                            {weatherDescription}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Sunstay Score */}
-                            <div className="mb-6">
+                            <div className="mb-4">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                        <img src="/assets/sun-badge.jpg" alt="Score" className="w-6 h-6 rounded-full" />
+                                        <img src="/assets/sun-badge.jpg" alt="Score" className="w-5 h-5 rounded-full" />
                                         Sunstay Score
                                         {weather && (
                                             <span className="text-xs text-gray-400 font-normal">(Live)</span>
                                         )}
                                     </span>
-                                    <span className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                                    <span className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
                                         {sunstayScore}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${sunstayScore}%` }}
@@ -163,47 +255,28 @@ const VenueCard = ({ venue, onClose }) => {
                                         className={`h-full bg-gradient-to-r ${getScoreColor(sunstayScore)} rounded-full`}
                                     />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1.5 text-center">
-                                    {sunstayScore >= 80 ? "Excellent conditions right now!" :
-                                        sunstayScore >= 60 ? "Good vibes expected" :
-                                            "Check venue amenities for comfort"}
-                                </p>
                             </div>
 
                             {/* Tags */}
-                            <div className="flex flex-wrap gap-2 mb-6 justify-center">
+                            <div className="flex flex-wrap gap-1.5 mb-4 justify-center">
                                 {venue.tags.map((tag, index) => (
                                     <motion.span
                                         key={index}
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-full text-sm font-semibold text-gray-800 border border-purple-300/30"
+                                        transition={{ delay: index * 0.05 }}
+                                        className="px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 border border-gray-200"
                                     >
                                         {tag}
                                     </motion.span>
                                 ))}
                             </div>
 
-                            {/* Fireplace Mode indicator */}
-                            {isFireplaceMode && venue.tags.includes('Fireplace') && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mb-6 p-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-xl border border-orange-400/30 flex items-center justify-center gap-3"
-                                >
-                                    <img src="/assets/fire-icon.jpg" alt="Fire" className="w-10 h-10 rounded-lg" />
-                                    <span className="text-sm font-semibold text-orange-900">
-                                        🔥 Fireplace Mode Active - Perfect for Today!
-                                    </span>
-                                </motion.div>
-                            )}
-
                             {/* Book Now button */}
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`w-full py-4 bg-gradient-to-r ${getButtonGradient()} text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group`}
+                                className={`w-full py-3.5 bg-gradient-to-r ${getButtonGradient()} text-white font-bold text-base rounded-2xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group`}
                             >
                                 <span className="relative z-10">Book Now</span>
                                 <motion.div
