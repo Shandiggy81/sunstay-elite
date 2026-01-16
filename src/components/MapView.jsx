@@ -1,14 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAP_STYLE, INITIAL_VIEW_STATE } from '../config/mapConfig';
 import { venues } from '../data/venues';
 
-const MapView = ({ onVenueSelect, selectedVenue }) => {
+const MapView = forwardRef(({ onVenueSelect, selectedVenue, filteredVenueIds, mapRef }, ref) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const markers = useRef([]);
     const [mapLoaded, setMapLoaded] = useState(false);
+
+    // Expose flyTo method to parent via ref
+    useImperativeHandle(mapRef, () => ({
+        flyTo: (options) => {
+            if (map.current) {
+                map.current.flyTo(options);
+            }
+        }
+    }));
 
     useEffect(() => {
         if (map.current) return; // Initialize map only once
@@ -34,7 +43,9 @@ const MapView = ({ onVenueSelect, selectedVenue }) => {
 
         return () => {
             markers.current.forEach(marker => marker.remove());
-            map.current.remove();
+            if (map.current) {
+                map.current.remove();
+            }
         };
     }, []);
 
@@ -50,16 +61,42 @@ const MapView = ({ onVenueSelect, selectedVenue }) => {
         }
     }, [selectedVenue]);
 
+    // Update marker visibility when filter changes
+    useEffect(() => {
+        markers.current.forEach((markerObj) => {
+            const { marker, venueId } = markerObj;
+            const element = marker.getElement();
+
+            if (filteredVenueIds === null) {
+                // Show all venues
+                element.style.display = 'block';
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1)';
+            } else if (filteredVenueIds.includes(venueId)) {
+                // Show filtered venues with emphasis
+                element.style.display = 'block';
+                element.style.opacity = '1';
+                element.style.transform = 'scale(1.2)';
+            } else {
+                // Hide non-matching venues
+                element.style.display = 'block';
+                element.style.opacity = '0.3';
+                element.style.transform = 'scale(0.8)';
+            }
+        });
+    }, [filteredVenueIds]);
+
     const addVenueMarkers = () => {
         venues.forEach((venue) => {
             // Create custom marker element
             const el = document.createElement('div');
             el.className = 'venue-marker';
+            el.style.transition = 'all 0.3s ease';
             el.innerHTML = `
-        <div class="venue-marker-pill">
-          <span class="venue-emoji">${venue.emoji}</span>
-        </div>
-      `;
+                <div class="venue-marker-pill">
+                    <span class="venue-emoji">${venue.emoji}</span>
+                </div>
+            `;
 
             // Add click event
             el.addEventListener('click', () => {
@@ -71,7 +108,7 @@ const MapView = ({ onVenueSelect, selectedVenue }) => {
                 .setLngLat([venue.lng, venue.lat])
                 .addTo(map.current);
 
-            markers.current.push(marker);
+            markers.current.push({ marker, venueId: venue.id });
         });
     };
 
@@ -90,6 +127,8 @@ const MapView = ({ onVenueSelect, selectedVenue }) => {
             )}
         </div>
     );
-};
+});
+
+MapView.displayName = 'MapView';
 
 export default MapView;

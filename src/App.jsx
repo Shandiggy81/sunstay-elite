@@ -1,10 +1,12 @@
-import React, { useState, Component } from 'react';
+import React, { useState, Component, useRef, useCallback } from 'react';
 import { WeatherProvider, useWeather } from './context/WeatherContext';
 import WeatherBackground from './components/WeatherBackground';
 import MapView from './components/MapView';
 import VenueCard from './components/VenueCard';
 import SunnyMascot from './components/SunnyMascot';
+import ChatWidget from './components/ChatWidget';
 import { motion } from 'framer-motion';
+import { venues } from './data/venues';
 
 // Loading fallback component
 const LoadingScreen = () => (
@@ -61,6 +63,9 @@ const WeatherIndicator = () => {
 
 const AppContent = () => {
     const [selectedVenue, setSelectedVenue] = useState(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [filteredVenueIds, setFilteredVenueIds] = useState(null); // null = show all
+    const mapRef = useRef(null);
 
     const handleVenueSelect = (venue) => {
         setSelectedVenue(venue);
@@ -68,6 +73,79 @@ const AppContent = () => {
 
     const handleCloseCard = () => {
         setSelectedVenue(null);
+    };
+
+    const toggleChat = () => {
+        setIsChatOpen(prev => !prev);
+    };
+
+    const closeChat = () => {
+        setIsChatOpen(false);
+    };
+
+    // Chat action: Filter to rooftops only
+    const handleFilterRooftops = useCallback(() => {
+        const rooftopVenues = venues.filter(v =>
+            v.vibe.toLowerCase().includes('rooftop') ||
+            v.tags.includes('Rooftop') ||
+            v.tags.includes('Views')
+        );
+        setFilteredVenueIds(rooftopVenues.map(v => v.id));
+        setSelectedVenue(null);
+
+        // Close chat after a moment
+        setTimeout(() => {
+            setIsChatOpen(false);
+        }, 1500);
+    }, []);
+
+    // Chat action: Find beer garden (Wonderland)
+    const handleFindBeerGarden = useCallback(() => {
+        const beerGarden = venues.find(v => v.name === 'Wonderland');
+        if (beerGarden) {
+            setFilteredVenueIds(null); // Show all venues
+            setSelectedVenue(beerGarden);
+
+            // Pan to the venue if map ref is available
+            if (mapRef.current && mapRef.current.flyTo) {
+                mapRef.current.flyTo({
+                    center: [beerGarden.lng, beerGarden.lat],
+                    zoom: 16,
+                    duration: 1500
+                });
+            }
+        }
+
+        setTimeout(() => {
+            setIsChatOpen(false);
+        }, 1500);
+    }, []);
+
+    // Chat action: Surprise me - random venue
+    const handleSurpriseMe = useCallback(() => {
+        const randomIndex = Math.floor(Math.random() * venues.length);
+        const randomVenue = venues[randomIndex];
+
+        setFilteredVenueIds(null); // Show all venues
+        setSelectedVenue(randomVenue);
+
+        // Pan to the venue if map ref is available
+        if (mapRef.current && mapRef.current.flyTo) {
+            mapRef.current.flyTo({
+                center: [randomVenue.lng, randomVenue.lat],
+                zoom: 15,
+                duration: 1500
+            });
+        }
+
+        setTimeout(() => {
+            setIsChatOpen(false);
+        }, 1500);
+    }, []);
+
+    // Clear filter function
+    const handleClearFilter = () => {
+        setFilteredVenueIds(null);
     };
 
     return (
@@ -105,6 +183,27 @@ const AppContent = () => {
                 </div>
             </motion.header>
 
+            {/* Filter indicator */}
+            {filteredVenueIds && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute top-28 left-1/2 -translate-x-1/2 z-20"
+                >
+                    <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-700">
+                            🏙️ Showing {filteredVenueIds.length} rooftop venues
+                        </span>
+                        <button
+                            onClick={handleClearFilter}
+                            className="text-xs font-bold text-orange-500 hover:text-orange-600 ml-2"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Main content - Map */}
             <motion.main
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -116,6 +215,8 @@ const AppContent = () => {
                     <MapView
                         onVenueSelect={handleVenueSelect}
                         selectedVenue={selectedVenue}
+                        filteredVenueIds={filteredVenueIds}
+                        mapRef={mapRef}
                     />
                 </div>
             </motion.main>
@@ -123,8 +224,17 @@ const AppContent = () => {
             {/* Venue detail card */}
             <VenueCard venue={selectedVenue} onClose={handleCloseCard} />
 
+            {/* Chat widget */}
+            <ChatWidget
+                isOpen={isChatOpen}
+                onClose={closeChat}
+                onFilterRooftops={handleFilterRooftops}
+                onFindBeerGarden={handleFindBeerGarden}
+                onSurpriseMe={handleSurpriseMe}
+            />
+
             {/* Sunny mascot FAB */}
-            <SunnyMascot />
+            <SunnyMascot onClick={toggleChat} isChatOpen={isChatOpen} />
 
             {/* Footer badge */}
             <motion.div
