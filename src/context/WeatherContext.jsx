@@ -39,20 +39,60 @@ export const WeatherProvider = ({ children }) => {
     }, []);
 
     const fetchWeather = async () => {
+        // Demo fallback weather for Melbourne (used when API unavailable)
+        const DEMO_WEATHER = {
+            main: { temp: 22, feels_like: 21, humidity: 55 },
+            weather: [{ main: 'Clear', description: 'clear sky', icon: '01d' }],
+            wind: { speed: 3.5 },
+            name: 'Melbourne',
+            uvi: 8, // High UV for demo
+            rain_arrival: 45, // Demo: Rain in 45 min
+            rain_clearing_time: '3:00 PM',
+            next_dry_window: '7:00 PM - 10:00 PM',
+            hourly: [
+                { dt: Date.now() / 1000 + 3600 * 0, temp: 22, weather: [{ main: 'Clear', icon: '01d' }], wind_speed: 3, uvi: 8 },
+                { dt: Date.now() / 1000 + 3600 * 1, temp: 24, weather: [{ main: 'Clear', icon: '01d' }], wind_speed: 4, uvi: 9 },
+                { dt: Date.now() / 1000 + 3600 * 2, temp: 25, weather: [{ main: 'Clear', icon: '01d' }], wind_speed: 5, uvi: 10 },
+                { dt: Date.now() / 1000 + 3600 * 3, temp: 24, weather: [{ main: 'Clouds', icon: '02d' }], wind_speed: 12, uvi: 6 },
+                { dt: Date.now() / 1000 + 3600 * 4, temp: 23, weather: [{ main: 'Clouds', icon: '03d' }], wind_speed: 15, uvi: 4 },
+                { dt: Date.now() / 1000 + 3600 * 5, temp: 22, weather: [{ main: 'Clear', icon: '01d' }], wind_speed: 6, uvi: 2 },
+                { dt: Date.now() / 1000 + 3600 * 6, temp: 21, weather: [{ main: 'Clear', icon: '01d' }], wind_speed: 4, uvi: 1 },
+                { dt: Date.now() / 1000 + 3600 * 7, temp: 20, weather: [{ main: 'Clear', icon: '01n' }], wind_speed: 3, uvi: 0 },
+                { dt: Date.now() / 1000 + 3600 * 8, temp: 19, weather: [{ main: 'Clear', icon: '01n' }], wind_speed: 2, uvi: 0 },
+                { dt: Date.now() / 1000 + 3600 * 9, temp: 18, weather: [{ main: 'Clear', icon: '01n' }], wind_speed: 2, uvi: 0 },
+                { dt: Date.now() / 1000 + 3600 * 10, temp: 17, weather: [{ main: 'Clear', icon: '01n' }], wind_speed: 3, uvi: 0 },
+                { dt: Date.now() / 1000 + 3600 * 11, temp: 16, weather: [{ main: 'Clear', icon: '01n' }], wind_speed: 2, uvi: 0 },
+            ]
+        };
+
         // Skip API call if no valid key is set
         if (!WEATHER_API_KEY) {
-            console.log('Weather API key not configured, using default sunny theme');
+            console.log('Weather API key not configured, using demo weather data');
+            setWeather(DEMO_WEATHER);
             setTheme('sunny');
             setLoading(false);
             return;
         }
 
         try {
+            // Standard weather call
             const response = await axios.get(
                 `https://api.openweathermap.org/data/2.5/weather?lat=${MELBOURNE_COORDS.lat}&lon=${MELBOURNE_COORDS.lon}&appid=${WEATHER_API_KEY}&units=metric`
             );
 
             const weatherData = response.data;
+
+            // Try to fetch UV if it's not in the main response (standard /weather doesn't have it)
+            try {
+                const uvResponse = await axios.get(
+                    `https://api.openweathermap.org/data/2.5/uvi?lat=${MELBOURNE_COORDS.lat}&lon=${MELBOURNE_COORDS.lon}&appid=${WEATHER_API_KEY}`
+                );
+                weatherData.uvi = uvResponse.data.value;
+            } catch (uvErr) {
+                console.log('UV API failed or not available, using default based on conditions');
+                weatherData.uvi = weatherData.weather[0].main === 'Clear' ? 8 : 2;
+            }
+
             setWeather(weatherData);
 
             // Determine theme based on weather condition
@@ -63,7 +103,9 @@ export const WeatherProvider = ({ children }) => {
             setLoading(false);
         } catch (error) {
             console.error('Error fetching weather:', error);
-            // Fallback to sunny theme if API fails
+            // Use demo weather as fallback if API fails
+            console.log('Using demo weather data as fallback');
+            setWeather(DEMO_WEATHER);
             setTheme('sunny');
             setLoading(false);
         }
@@ -137,6 +179,17 @@ export const WeatherProvider = ({ children }) => {
             }
         }
 
+        // UV Scoring (High UV without shade reduces score)
+        const uvi = weather.uvi ?? 0;
+        if (uvi >= 6) {
+            const hasShade = venue && venue.tags && (venue.tags.includes('Shaded') || venue.tags.includes('Covered') || venue.tags.includes('Garden'));
+            if (!hasShade) {
+                score -= 15; // Penalty for high UV exposure
+            } else {
+                score += 5; // Bonus for sun-safe shelter
+            }
+        }
+
         // Clamp score between 0-100
         return Math.max(0, Math.min(100, score));
     };
@@ -149,6 +202,11 @@ export const WeatherProvider = ({ children }) => {
     const getTemperature = () => {
         if (!weather) return null;
         return Math.round(weather.main.temp);
+    };
+
+    // New: Get UV Index
+    const getUVIndex = () => {
+        return weather?.uvi ?? 0;
     };
 
     // Generate dynamic weather description based on conditions
@@ -243,6 +301,7 @@ export const WeatherProvider = ({ children }) => {
         getWeatherDescription,
         getCardBackground,
         getCardAccent,
+        getUVIndex,
     };
 
     return (

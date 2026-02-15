@@ -2,7 +2,16 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle } from 'lucide-react';
 
-const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFindSmoking, onSurpriseMe }) => {
+const ChatWidget = ({
+    isOpen,
+    onClose,
+    onFindWheelchair,
+    onFindDogFriendly,
+    onFindSmoking,
+    onSurpriseMe,
+    onFindFamily,
+    onFindBusiness
+}) => {
     const [messages, setMessages] = useState([
         {
             id: 1,
@@ -50,6 +59,16 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
             action: onFindDogFriendly
         },
         {
+            text: "Pram & Family Friendly? 👶",
+            response: "Looking for family-friendly spots! Filtering now... 🍼",
+            action: onFindFamily
+        },
+        {
+            text: "Good for Business/Functions? 💼",
+            response: "Finding professional spots with space! Filtering... 👔",
+            action: onFindBusiness
+        },
+        {
             text: "Where can I smoke? 🚬",
             response: "No worries! Showing venues with smoking areas... 🌿",
             action: onFindSmoking
@@ -83,9 +102,9 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
                     {/* Chat window */}
                     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-500 px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50 shadow-md">
+                        <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-500 px-5 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/50 shadow-md">
                                     <img
                                         src="/assets/sunny-mascot.jpg"
                                         alt="Sunny"
@@ -93,35 +112,35 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
                                     />
                                 </div>
                                 <div>
-                                    <h3 className="text-white font-bold text-sm">Sunny</h3>
-                                    <div className="flex items-center gap-1">
-                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                        <span className="text-white/80 text-xs">Online</span>
+                                    <h3 className="text-white font-black text-base tracking-tight leading-none mb-1">Sunny · Weather Guide</h3>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse border border-white/20"></span>
+                                        <span className="text-white/90 text-xs font-bold uppercase tracking-widest">Available</span>
                                     </div>
                                 </div>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
+                                className="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
                             >
-                                <X className="w-5 h-5 text-white" />
+                                <X className="w-6 h-6 text-white" />
                             </button>
                         </div>
 
                         {/* Messages */}
-                        <div className="h-56 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-white">
+                        <div className="h-80 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white">
                             {messages.map((message) => (
                                 <motion.div
                                     key={message.id}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} `}
                                 >
                                     <div
-                                        className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm ${message.type === 'user'
-                                                ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-br-md'
-                                                : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
-                                            }`}
+                                        className={`max-w-[90%] px-6 py-4 rounded-3xl text-[15px] sm:text-base font-medium shadow-sm leading-relaxed ${message.type === 'user'
+                                            ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-br-md'
+                                            : 'bg-white border border-gray-100 text-gray-800 rounded-bl-md'
+                                            } `}
                                     >
                                         {message.text}
                                     </div>
@@ -129,23 +148,22 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
                             ))}
                         </div>
 
-                        {/* Quick replies */}
-                        <div className="p-3 bg-gray-50 border-t border-gray-100">
+                        {/* Quick replies & Actions Area */}
+                        <div className="p-5 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
                             {!hasActed ? (
-                                <div className="space-y-1.5">
+                                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x pt-1">
                                     {quickReplies.map((reply, index) => (
                                         <motion.button
                                             key={index}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: index * 0.08 }}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
                                             onClick={() => handleQuickReply(reply.action, reply.text, reply.response)}
-                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-all text-left flex items-center gap-2"
+                                            className="flex-shrink-0 snap-start h-[48px] px-6 bg-white border-2 border-gray-100 rounded-full text-[14px] font-black text-gray-700 hover:border-amber-400 hover:bg-amber-50 shadow-sm transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                                         >
-                                            <MessageCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                                            <span className="truncate">{reply.text}</span>
+                                            <span>{reply.text}</span>
                                         </motion.button>
                                     ))}
                                 </div>
@@ -156,8 +174,9 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={resetChat}
-                                    className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+                                    className="w-full h-[52px] bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl text-[15px] font-black text-white flex items-center justify-center gap-2 shadow-lg shadow-orange-100"
                                 >
+                                    <MessageCircle size={18} />
                                     <span>Ask Sunny Again</span>
                                 </motion.button>
                             )}
@@ -165,7 +184,7 @@ const ChatWidget = ({ isOpen, onClose, onFindWheelchair, onFindDogFriendly, onFi
                     </div>
 
                     {/* Speech bubble arrow */}
-                    <div className="absolute -bottom-2 right-8 w-4 h-4 bg-gray-50 rotate-45 border-r border-b border-gray-100"></div>
+                    <div className="absolute -bottom-2 right-8 w-4 h-4 bg-white rotate-45 border-r border-b border-gray-100"></div>
                 </motion.div>
             )}
         </AnimatePresence>
